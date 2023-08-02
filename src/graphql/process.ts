@@ -10,6 +10,16 @@ import {
 } from "nexus";
 import AWS from "aws-sdk";
 import { Context } from "../context";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+const CONFIG = {
+	endpoint: process.env.ENDPOINT,
+	accessKeyId: process.env.ACCESS_KEY,
+	secretAccessKey: process.env.SECRET_KEY,
+	region: "default",
+};
 
 const State = enumType({
 	name: "State",
@@ -66,16 +76,38 @@ export const ProcessMutation = extendType({
 				bg_color: nonNull(stringArg()),
 			},
 			async resolve(parent, args, context: Context) {
-				// TODO: check if images exist
 				try {
-					const ps = await context.prisma.process.create({
-						data: {
-							images: args.images,
-							bg_color: args.bg_color,
-							border: args.border,
-						},
-					});
-					return ps;
+					const s3 = new AWS.S3(CONFIG);
+					const check_file_exist = async (files: string[]) => {
+						const promises = files.map((file) => {
+							const params = {
+								Bucket: process.env.BUCKET,
+								Key: file,
+							};
+							return s3
+								.headObject(params)
+								.promise()
+								.then(() => true)
+								.catch(() => false);
+						});
+						const results = await Promise.all(promises);
+						return results.every((result) => result === true);
+					};
+					const all_files_exist = await check_file_exist(args.images);
+					if (all_files_exist) {
+						const ps = await context.prisma.process.create({
+							data: {
+								images: args.images,
+								bg_color: args.bg_color,
+								border: args.border,
+							},
+						});
+						return ps;
+					} else {
+						throw new Error(
+							"Can not find all files that you requested"
+						);
+					}
 				} catch (error) {
 					console.log(error);
 					throw new Error("Failed to create process");
@@ -95,14 +127,7 @@ export const UploadImages = extendType({
 				mimetype: nonNull(stringArg()),
 			},
 			resolve(parent, args, context) {
-				const config = {
-					endpoint: process.env.ENDPOINT,
-					accessKeyId: process.env.ACCESS_KEY,
-					secretAccessKey: process.env.SECRET_KEY,
-					region: "default",
-				};
-
-				const s3 = new AWS.S3(config);
+				const s3 = new AWS.S3(CONFIG);
 
 				const bucket_name = process.env.BUCKET;
 				const expiration = 60 * 10; // expires in 10 minutes
