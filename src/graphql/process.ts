@@ -7,6 +7,7 @@ import {
 	stringArg,
 } from "nexus";
 import { NexusGenObjects } from "../../nexus-typegen";
+import AWS from "aws-sdk";
 
 export const Process = objectType({
 	name: "Process",
@@ -76,6 +77,42 @@ export const ProcessMutation = extendType({
 				});
 
 				return processes[processes.length - 1];
+			},
+		});
+	},
+});
+
+export const UploadImages = extendType({
+	type: "Mutation",
+	definition(t) {
+		t.nonNull.field("UploadImage", {
+			type: "String",
+			args: {
+				name: nonNull(stringArg()),
+				mimetype: nonNull(stringArg()),
+			},
+			resolve(parent, args, context) {
+				const config = {
+					endpoint: process.env.ENDPOINT,
+					accessKeyId: process.env.ACCESS_KEY,
+					secretAccessKey: process.env.SECRET_KEY,
+					region: "default",
+				};
+
+				const s3 = new AWS.S3(config);
+
+				const bucket_name = process.env.BUCKET;
+				const expiration = 60 * 10; // expires in 10 minutes
+
+				const params = {
+					Bucket: bucket_name,
+					Key: args.name,
+					Expires: expiration,
+					ContentType: args.mimetype,
+				};
+				const signed_url = s3.getSignedUrl("putObject", params);
+
+				return signed_url;
 			},
 		});
 	},

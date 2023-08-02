@@ -1,7 +1,10 @@
 import { ApolloServer } from "apollo-server";
 import { ApolloServerPluginLandingPageGraphQLPlayground } from "apollo-server-core";
-
 import { schema } from "./schema";
+import dotenv from "dotenv";
+
+dotenv.config();
+
 export const server = new ApolloServer({
 	schema,
 	plugins: [ApolloServerPluginLandingPageGraphQLPlayground()],

@@ -4,6 +4,7 @@
 
 type Mutation {
   CreateProcess(bg_color: String!, border: Int!, images: [String!]!): Process!
+  UploadImage(mimetype: String!, name: String!): String!
 }
 
 type Process {
