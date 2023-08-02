@@ -17,6 +17,8 @@ model Process {
   state       State    @default(PENDING)
   images      String[]
   output      String?
+  border      Int
+  bg_color    String
 }
 
 enum State {

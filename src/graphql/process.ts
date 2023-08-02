@@ -6,8 +6,8 @@ import {
 	objectType,
 	stringArg,
 } from "nexus";
-import { NexusGenObjects } from "../../nexus-typegen";
 import AWS from "aws-sdk";
+import { Context } from "../context";
 
 export const Process = objectType({
 	name: "Process",
@@ -21,25 +21,6 @@ export const Process = objectType({
 	},
 });
 
-const processes: NexusGenObjects["Process"][] = [
-	{
-		id: "1",
-		images: ["image1", "image2", "image3"],
-		output: "output",
-		state: "PENDING",
-		log: "log",
-		created_at: "created at",
-	},
-	{
-		id: "2",
-		images: ["image12", "image22", "imag2e3"],
-		output: "ouadfftput",
-		state: "DONE",
-		log: "losdfadfg",
-		created_at: "creatasdfdfed at",
-	},
-];
-
 export const ProcessQuery = extendType({
 	type: "Query",
 	definition(t) {
@@ -50,6 +31,7 @@ export const ProcessQuery = extendType({
 				state: stringArg(),
 			},
 			resolve(parent, args, context) {
+				// TODO: check one of args is provided not both. or maybe i'll remove id.
 				const { id, state } = args;
 				return processes.filter((ps) => ps.state === state);
 			},
@@ -60,23 +42,28 @@ export const ProcessQuery = extendType({
 export const ProcessMutation = extendType({
 	type: "Mutation",
 	definition(t) {
-		t.nonNull.field("CreateProcess", {
+		t.field("CreateProcess", {
 			type: "Process",
 			args: {
 				images: nonNull(list(nonNull(stringArg()))),
 				border: nonNull(intArg()),
 				bg_color: nonNull(stringArg()),
 			},
-			resolve(parent, args, context) {
-				// TODO: run real process and add it to datebase
-				processes.push({
-					id: (processes.length + 1).toString(),
-					created_at: new Date().toString(),
-					images: args.images,
-					state: "PENDING",
-				});
-
-				return processes[processes.length - 1];
+			async resolve(parent, args, context: Context) {
+				// TODO: check if images exist
+				try {
+					const ps = await context.prisma.process.create({
+						data: {
+							images: args.images,
+							bg_color: args.bg_color,
+							border: args.border,
+						},
+					});
+					return ps;
+				} catch (error) {
+					console.log(error);
+					throw new Error("Failed to create process");
+				}
 			},
 		});
 	},
