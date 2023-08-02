@@ -1,4 +1,6 @@
 import {
+	arg,
+	enumType,
 	extendType,
 	intArg,
 	list,
@@ -9,13 +11,18 @@ import {
 import AWS from "aws-sdk";
 import { Context } from "../context";
 
+const State = enumType({
+	name: "State",
+	members: ["DONE", "DOING", "PENDING"],
+});
+
 export const Process = objectType({
 	name: "Process",
 	definition(t) {
 		t.nonNull.string("id");
 		t.nonNull.list.nonNull.string("images");
 		t.string("output");
-		t.nonNull.string("state");
+		t.nonNull.field("state", { type: State });
 		t.string("log");
 		t.nonNull.string("created_at");
 	},
@@ -27,13 +34,22 @@ export const ProcessQuery = extendType({
 		t.nonNull.list.nonNull.field("processes", {
 			type: "Process",
 			args: {
-				id: stringArg(),
-				state: stringArg(),
+				state: arg({
+					type: State,
+				}),
 			},
-			resolve(parent, args, context) {
-				// TODO: check one of args is provided not both. or maybe i'll remove id.
-				const { id, state } = args;
-				return processes.filter((ps) => ps.state === state);
+			async resolve(parent, args, context: Context) {
+				try {
+					const pss = await context.prisma.process.findMany({
+						where: {
+							state: args.state,
+						},
+					});
+					return pss;
+				} catch (error) {
+					console.log(error);
+					throw new Error("Failed to get processes");
+				}
 			},
 		});
 	},

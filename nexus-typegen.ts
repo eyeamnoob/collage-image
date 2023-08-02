@@ -17,6 +17,7 @@ export interface NexusGenInputs {
 }
 
 export interface NexusGenEnums {
+  State: "DOING" | "DONE" | "PENDING"
 }
 
 export interface NexusGenScalars {
@@ -35,7 +36,7 @@ export interface NexusGenObjects {
     images: string[]; // [String!]!
     log?: string | null; // String
     output?: string | null; // String
-    state: string; // String!
+    state: NexusGenEnums['State']; // State!
   }
   Query: {};
 }
@@ -48,7 +49,7 @@ export interface NexusGenUnions {
 
 export type NexusGenRootTypes = NexusGenObjects
 
-export type NexusGenAllTypes = NexusGenRootTypes & NexusGenScalars
+export type NexusGenAllTypes = NexusGenRootTypes & NexusGenScalars & NexusGenEnums
 
 export interface NexusGenFieldTypes {
   Mutation: { // field return type
@@ -61,7 +62,7 @@ export interface NexusGenFieldTypes {
     images: string[]; // [String!]!
     log: string | null; // String
     output: string | null; // String
-    state: string; // String!
+    state: NexusGenEnums['State']; // State!
   }
   Query: { // field return type
     processes: NexusGenRootTypes['Process'][]; // [Process!]!
@@ -79,7 +80,7 @@ export interface NexusGenFieldTypeNames {
     images: 'String'
     log: 'String'
     output: 'String'
-    state: 'String'
+    state: 'State'
   }
   Query: { // field return type name
     processes: 'Process'
@@ -100,8 +101,7 @@ export interface NexusGenArgTypes {
   }
   Query: {
     processes: { // args
-      id?: string | null; // String
-      state?: string | null; // String
+      state?: NexusGenEnums['State'] | null; // State
     }
   }
 }
@@ -116,7 +116,7 @@ export type NexusGenObjectNames = keyof NexusGenObjects;
 
 export type NexusGenInputNames = never;
 
-export type NexusGenEnumNames = never;
+export type NexusGenEnumNames = keyof NexusGenEnums;
 
 export type NexusGenInterfaceNames = never;
 

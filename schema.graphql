@@ -13,9 +13,15 @@ type Process {
   images: [String!]!
   log: String
   output: String
-  state: String!
+  state: State!
 }
 
 type Query {
-  processes(id: String, state: String): [Process!]!
+  processes(state: State): [Process!]!
+}
+
+enum State {
+  DOING
+  DONE
+  PENDING
 }
