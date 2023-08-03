@@ -19,6 +19,7 @@ model Process {
   output      String?
   border      Int
   bg_color    String
+  is_active   Boolean @default(true)
 }
 
 enum State {
