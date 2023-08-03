@@ -15,8 +15,8 @@ let promises = [];
 
 async function draw_image(s3_object, ctx) {
 	console.log("loading image...");
-	console.log(s3_object);
-	const image = await loadImage(s3_object.body);
+	console.log(s3_object.Body);
+	const image = await loadImage(s3_object.Body);
 	console.log("image ready to draw");
 	const width = (WIDTH - border_size * (image_num + 1)) / image_num;
 	ctx.drawImage(
@@ -44,11 +44,11 @@ export async function collage_image(ps) {
 	};
 	const params2 = {
 		Bucket: process.env.BUCKET,
-		Key: ps.images[0],
+		Key: ps.images[1],
 	};
 	const params3 = {
 		Bucket: process.env.BUCKET,
-		Key: ps.images[0],
+		Key: ps.images[2],
 	};
 
 	try {
@@ -58,26 +58,30 @@ export async function collage_image(ps) {
 
 		const all_done = Promise.all([promise1, promise2, promise3]);
 
-		all_done.then((image1, image2, image3) => {
+		all_done.then((images) => {
 			const canvas = createCanvas(WIDTH, HEIGHT);
 			const ctx = canvas.getContext("2d");
 
 			ctx.fillStyle = "#ff0000";
 			ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
-			console.log(image1);
-			console.log(image2);
-			console.log(image3);
-
-			promises.push(draw_image(image1, ctx));
-			promises.push(draw_image(image2, ctx));
-			promises.push(draw_image(image3, ctx));
+			promises.push(draw_image(images[0], ctx));
+			promises.push(draw_image(images[1], ctx));
+			promises.push(draw_image(images[2], ctx));
 
 			const all_done = Promise.all(promises);
 			all_done
 				.then(() => {
-					console.log("everythings done");
-					fs.writeFileSync("collage.png", canvas.toBuffer());
+					const params = {
+						Bucket: process.env.BUCKET,
+						Key: "collage.png",
+						Body: canvas.toBuffer(),
+					};
+					s3.putObject(params)
+						.promise()
+						.then(() => {
+							console.log("everythings done");
+						});
 				})
 				.catch(console.log);
 		});
