@@ -11,6 +11,7 @@ import {
 import AWS from "aws-sdk";
 import { Context } from "../context";
 import dotenv from "dotenv";
+import { collage_image } from "./collage";
 
 dotenv.config();
 
@@ -102,6 +103,7 @@ export const ProcessMutation = extendType({
 								border: args.border,
 							},
 						});
+						await collage_image(ps);
 						return ps;
 					} else {
 						throw new Error(
