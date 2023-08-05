@@ -1,5 +1,6 @@
 import {
 	arg,
+	booleanArg,
 	enumType,
 	extendType,
 	intArg,
@@ -91,17 +92,22 @@ export const ProcessMutation = extendType({
 				images: nonNull(list(nonNull(stringArg()))),
 				border: nonNull(intArg()),
 				bg_color: nonNull(stringArg()),
+				is_horizontal: nonNull(booleanArg()),
 			},
 			async resolve(parent, args, context: Context) {
 				try {
 					const s3 = new AWS.S3(CONFIG);
-					const all_files_exist = await check_file_exist(s3, args.images);
+					const all_files_exist = await check_file_exist(
+						s3,
+						args.images
+					);
 					if (all_files_exist) {
 						const ps = await context.prisma.process.create({
 							data: {
 								images: args.images,
 								bg_color: args.bg_color,
 								border: args.border,
+								is_horizontal: args.is_horizontal,
 							},
 						});
 						await collage_image(ps);

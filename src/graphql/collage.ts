@@ -4,28 +4,39 @@ const { createCanvas, loadImage } = require("canvas");
 const fs = require("fs");
 
 const size = 2;
-const WIDTH = 720 * size;
-const HEIGHT = 300 * size;
+let WIDTH = 720 * size;
+let HEIGHT = 300 * size;
 const image_num = 3;
 let offset_i = 0;
 let promises = [];
 
-async function draw_image(s3_object, ctx, border_size) {
+async function draw_image(s3_object, ctx, border_size, is_horizontal) {
 	// 299 is the max border size
 	console.log("loading image...");
 	const image = await loadImage(s3_object.Body);
 	console.log("image ready to draw");
-	const width = (WIDTH - border_size * (image_num + 1)) / image_num;
-	console.log(offset_i);
-	ctx.drawImage(
-		image,
-		offset_i,
-		border_size,
-		width,
-		HEIGHT - border_size * 2
-	);
+	if (is_horizontal) {
+		const width = (WIDTH - border_size * (image_num + 1)) / image_num;
+		ctx.drawImage(
+			image,
+			offset_i,
+			border_size,
+			width,
+			HEIGHT - border_size * 2
+		);
+		offset_i += width + border_size;
+	} else {
+		const height = (HEIGHT - border_size * (image_num + 1)) / image_num;
+		ctx.drawImage(
+			image,
+			border_size,
+			offset_i,
+			WIDTH - border_size * 2,
+			height
+		);
+		offset_i += height + border_size;
+	}
 	console.log("image drawed");
-	offset_i += width + border_size;
 }
 
 export async function collage_image(ps) {
@@ -57,50 +68,81 @@ export async function collage_image(ps) {
 		const all_done = Promise.all([promise1, promise2, promise3]);
 
 		all_done.then((images) => {
-			const canvas = createCanvas(WIDTH, HEIGHT);
-			const ctx = canvas.getContext("2d");
-
-			ctx.fillStyle = ps.bg_color;
-			ctx.fillRect(0, 0, WIDTH, HEIGHT);
-
-			offset_i = ps.border;
-			console.log(offset_i);
-
-			promises.push(draw_image(images[0], ctx, ps.border));
-			promises.push(draw_image(images[1], ctx, ps.border));
-			promises.push(draw_image(images[2], ctx, ps.border));
-
-			const all_done = Promise.all(promises);
-			all_done
+			context.prisma.process
+				.update({
+					where: {
+						id: ps.id,
+					},
+					data: {
+						state: "DOING",
+					},
+				})
 				.then(() => {
-					const key = `collage_${ps.id}.png`;
-					const params = {
-						Bucket: process.env.BUCKET,
-						Key: key,
-						Body: canvas.toBuffer(),
-					};
-					s3.putObject(params)
-						.promise()
+					if (ps.is_horizontal) {
+						WIDTH = 720 * size;
+						HEIGHT = 300 * size;
+					} else {
+						WIDTH = 300 * size;
+						HEIGHT = 720 * size;
+					}
+					const canvas = createCanvas(WIDTH, HEIGHT);
+					const ctx = canvas.getContext("2d");
+
+					ctx.fillStyle = ps.bg_color;
+					ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+					offset_i = ps.border;
+
+					promises.push(
+						draw_image(images[0], ctx, ps.border, ps.is_horizontal)
+					);
+					promises.push(
+						draw_image(images[1], ctx, ps.border, ps.is_horizontal)
+					);
+					promises.push(
+						draw_image(images[2], ctx, ps.border, ps.is_horizontal)
+					);
+
+					const all_done = Promise.all(promises);
+					all_done
 						.then(() => {
-							const { Body, ...rest } = params;
-							s3.getSignedUrl("getObject", rest, (err, data) => {
-								if (err) console.error(err, err.stack);
-								console.log(data);
-								context.prisma.process
-									.update({
-										where: {
-											id: ps.id,
-										},
-										data: {
-											output: data,
-											state: "DONE",
-										},
-									})
-									.then(() => {
-										console.log("everythings done");
-									});
-							});
-						});
+							const key = `collage_${ps.id}.png`;
+							const params = {
+								Bucket: process.env.BUCKET,
+								Key: key,
+								Body: canvas.toBuffer(),
+							};
+							s3.putObject(params)
+								.promise()
+								.then(() => {
+									const { Body, ...rest } = params;
+									s3.getSignedUrl(
+										"getObject",
+										rest,
+										(err, data) => {
+											if (err)
+												console.error(err, err.stack);
+											console.log(data);
+											context.prisma.process
+												.update({
+													where: {
+														id: ps.id,
+													},
+													data: {
+														output: data,
+														state: "DONE",
+													},
+												})
+												.then(() => {
+													console.log(
+														"everythings done"
+													);
+												});
+										}
+									);
+								});
+						})
+						.catch(console.log);
 				})
 				.catch(console.log);
 		});

@@ -11,15 +11,16 @@ datasource db {
 }
 
 model Process {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  created_at  DateTime @default(now())
-  log         String?
-  state       State    @default(PENDING)
-  images      String[]
-  output      String?
-  border      Int
-  bg_color    String
-  is_active   Boolean @default(true)
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  created_at    DateTime @default(now())
+  log           String?
+  state         State    @default(PENDING)
+  images        String[]
+  output        String?
+  border        Int
+  bg_color      String
+  is_active     Boolean @default(true)
+  is_horizontal Boolean
 }
 
 enum State {

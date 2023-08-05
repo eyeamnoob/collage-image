@@ -93,6 +93,7 @@ export interface NexusGenArgTypes {
       bg_color: string; // String!
       border: number; // Int!
       images: string[]; // [String!]!
+      is_horizontal: boolean; // Boolean!
     }
     UploadImage: { // args
       mimetype: string; // String!
