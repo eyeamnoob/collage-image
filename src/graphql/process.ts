@@ -108,6 +108,7 @@ export const ProcessMutation = extendType({
 								bg_color: args.bg_color,
 								border: args.border,
 								is_horizontal: args.is_horizontal,
+								log: "process created. pending...\n"
 							},
 						});
 						await collage_image(ps);

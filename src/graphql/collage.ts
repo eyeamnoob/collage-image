@@ -12,9 +12,7 @@ let promises = [];
 
 async function draw_image(s3_object, ctx, border_size, is_horizontal) {
 	// 299 is the max border size
-	console.log("loading image...");
 	const image = await loadImage(s3_object.Body);
-	console.log("image ready to draw");
 	if (is_horizontal) {
 		const width = (WIDTH - border_size * (image_num + 1)) / image_num;
 		ctx.drawImage(
@@ -36,7 +34,6 @@ async function draw_image(s3_object, ctx, border_size, is_horizontal) {
 		);
 		offset_i += height + border_size;
 	}
-	console.log("image drawed");
 }
 
 export async function collage_image(ps) {
@@ -75,9 +72,10 @@ export async function collage_image(ps) {
 					},
 					data: {
 						state: "DOING",
+						log: ps.log + "images loaded\n",
 					},
 				})
-				.then(() => {
+				.then((updated_ps) => {
 					if (ps.is_horizontal) {
 						WIDTH = 720 * size;
 						HEIGHT = 300 * size;
@@ -119,18 +117,20 @@ export async function collage_image(ps) {
 									s3.getSignedUrl(
 										"getObject",
 										rest,
-										(err, data) => {
+										(err, image_url) => {
 											if (err)
 												console.error(err, err.stack);
-											console.log(data);
 											context.prisma.process
 												.update({
 													where: {
 														id: ps.id,
 													},
 													data: {
-														output: data,
+														output: image_url,
 														state: "DONE",
+														log:
+															updated_ps.log +
+															"images were drawn",
 													},
 												})
 												.then(() => {
