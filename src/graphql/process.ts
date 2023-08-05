@@ -15,6 +15,22 @@ import { collage_image } from "./collage";
 
 dotenv.config();
 
+const check_file_exist = async (s3, files: string[]) => {
+	const promises = files.map((file) => {
+		const params = {
+			Bucket: process.env.BUCKET,
+			Key: file,
+		};
+		return s3
+			.headObject(params)
+			.promise()
+			.then(() => true)
+			.catch(() => false);
+	});
+	const results = await Promise.all(promises);
+	return results.every((result) => result === true);
+};
+
 const CONFIG = {
 	endpoint: process.env.ENDPOINT,
 	accessKeyId: process.env.ACCESS_KEY,
@@ -79,22 +95,7 @@ export const ProcessMutation = extendType({
 			async resolve(parent, args, context: Context) {
 				try {
 					const s3 = new AWS.S3(CONFIG);
-					const check_file_exist = async (files: string[]) => {
-						const promises = files.map((file) => {
-							const params = {
-								Bucket: process.env.BUCKET,
-								Key: file,
-							};
-							return s3
-								.headObject(params)
-								.promise()
-								.then(() => true)
-								.catch(() => false);
-						});
-						const results = await Promise.all(promises);
-						return results.every((result) => result === true);
-					};
-					const all_files_exist = await check_file_exist(args.images);
+					const all_files_exist = await check_file_exist(s3, args.images);
 					if (all_files_exist) {
 						const ps = await context.prisma.process.create({
 							data: {

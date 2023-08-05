@@ -6,19 +6,17 @@ const fs = require("fs");
 const size = 2;
 const WIDTH = 720 * size;
 const HEIGHT = 300 * size;
-const border_size = 12; // 299 is the maximum border size
 const image_num = 3;
-let i = 0;
-let offset_i = border_size;
-
+let offset_i = 0;
 let promises = [];
 
-async function draw_image(s3_object, ctx) {
+async function draw_image(s3_object, ctx, border_size) {
+	// 299 is the max border size
 	console.log("loading image...");
-	console.log(s3_object.Body);
 	const image = await loadImage(s3_object.Body);
 	console.log("image ready to draw");
 	const width = (WIDTH - border_size * (image_num + 1)) / image_num;
+	console.log(offset_i);
 	ctx.drawImage(
 		image,
 		offset_i,
@@ -62,25 +60,46 @@ export async function collage_image(ps) {
 			const canvas = createCanvas(WIDTH, HEIGHT);
 			const ctx = canvas.getContext("2d");
 
-			ctx.fillStyle = "#ff0000";
+			ctx.fillStyle = ps.bg_color;
 			ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
-			promises.push(draw_image(images[0], ctx));
-			promises.push(draw_image(images[1], ctx));
-			promises.push(draw_image(images[2], ctx));
+			offset_i = ps.border;
+			console.log(offset_i);
+
+			promises.push(draw_image(images[0], ctx, ps.border));
+			promises.push(draw_image(images[1], ctx, ps.border));
+			promises.push(draw_image(images[2], ctx, ps.border));
 
 			const all_done = Promise.all(promises);
 			all_done
 				.then(() => {
+					const key = `collage_${ps.id}.png`;
 					const params = {
 						Bucket: process.env.BUCKET,
-						Key: "collage.png",
+						Key: key,
 						Body: canvas.toBuffer(),
 					};
 					s3.putObject(params)
 						.promise()
 						.then(() => {
-							console.log("everythings done");
+							const { Body, ...rest } = params;
+							s3.getSignedUrl("getObject", rest, (err, data) => {
+								if (err) console.error(err, err.stack);
+								console.log(data);
+								context.prisma.process
+									.update({
+										where: {
+											id: ps.id,
+										},
+										data: {
+											output: data,
+											state: "DONE",
+										},
+									})
+									.then(() => {
+										console.log("everythings done");
+									});
+							});
 						});
 				})
 				.catch(console.log);
