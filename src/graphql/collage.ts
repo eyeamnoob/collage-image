@@ -37,6 +37,9 @@ async function draw_image(s3_object, ctx, border_size, is_horizontal) {
 }
 
 export async function collage_image(ps) {
+	if (!ps.is_active) {
+		return;
+	}
 	const CONFIG = {
 		endpoint: process.env.ENDPOINT,
 		accessKeyId: process.env.ACCESS_KEY,

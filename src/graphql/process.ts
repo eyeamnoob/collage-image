@@ -13,6 +13,7 @@ import AWS from "aws-sdk";
 import { Context } from "../context";
 import dotenv from "dotenv";
 import { collage_image } from "./collage";
+import { NoSchemaIntrospectionCustomRule } from "graphql";
 
 dotenv.config();
 
@@ -108,7 +109,7 @@ export const ProcessMutation = extendType({
 								bg_color: args.bg_color,
 								border: args.border,
 								is_horizontal: args.is_horizontal,
-								log: "process created. pending...\n"
+								log: "process created. pending...\n",
 							},
 						});
 						await collage_image(ps);
@@ -151,6 +152,33 @@ export const UploadImages = extendType({
 				const signed_url = s3.getSignedUrl("putObject", params);
 
 				return signed_url;
+			},
+		});
+	},
+});
+
+export const CancelProcess = extendType({
+	type: "Mutation",
+	definition(t) {
+		t.nonNull.field("CancelProcess", {
+			type: "Process",
+			args: {
+				id: nonNull(stringArg()),
+			},
+			resolve(parent, args, context: Context) {
+				context.prisma.process
+					.updateMany({
+						where: {
+							AND: [{ id: args.id }, { state: "PENDING" }],
+						},
+						data: {
+							is_active: false,
+						},
+					})
+					.then((ps) => {
+						return ps;
+					})
+					.catch(console.log);
 			},
 		});
 	},
