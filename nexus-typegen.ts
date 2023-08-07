@@ -53,6 +53,7 @@ export type NexusGenAllTypes = NexusGenRootTypes & NexusGenScalars & NexusGenEnu
 
 export interface NexusGenFieldTypes {
   Mutation: { // field return type
+    CancelProcess: NexusGenRootTypes['Process']; // Process!
     CreateProcess: NexusGenRootTypes['Process'] | null; // Process
     UploadImage: string; // String!
   }
@@ -71,6 +72,7 @@ export interface NexusGenFieldTypes {
 
 export interface NexusGenFieldTypeNames {
   Mutation: { // field return type name
+    CancelProcess: 'Process'
     CreateProcess: 'Process'
     UploadImage: 'String'
   }
@@ -89,6 +91,9 @@ export interface NexusGenFieldTypeNames {
 
 export interface NexusGenArgTypes {
   Mutation: {
+    CancelProcess: { // args
+      id: string; // String!
+    }
     CreateProcess: { // args
       bg_color: string; // String!
       border: number; // Int!

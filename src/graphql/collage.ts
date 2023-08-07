@@ -47,108 +47,76 @@ export async function collage_image(ps) {
 		region: "default",
 	};
 	const s3 = new AWS.S3(CONFIG);
-	const params1 = {
-		Bucket: process.env.BUCKET,
-		Key: ps.images[0],
-	};
-	const params2 = {
-		Bucket: process.env.BUCKET,
-		Key: ps.images[1],
-	};
-	const params3 = {
-		Bucket: process.env.BUCKET,
-		Key: ps.images[2],
-	};
+	const params = [
+		{ Bucket: process.env.BUCKET, Key: ps.images[0] },
+		{ Bucket: process.env.BUCKET, Key: ps.images[1] },
+		{ Bucket: process.env.BUCKET, Key: ps.images[2] },
+	];
 
 	try {
-		const promise1 = s3.getObject(params1).promise();
-		const promise2 = s3.getObject(params2).promise();
-		const promise3 = s3.getObject(params3).promise();
+		const promises = params.map((param) => s3.getObject(param).promise());
+		const images = await Promise.all(promises);
 
-		const all_done = Promise.all([promise1, promise2, promise3]);
-
-		all_done.then((images) => {
-			context.prisma.process
-				.update({
-					where: {
-						id: ps.id,
-					},
-					data: {
-						state: "DOING",
-						log: ps.log + "images loaded\n",
-					},
-				})
-				.then((updated_ps) => {
-					if (ps.is_horizontal) {
-						WIDTH = 720 * size;
-						HEIGHT = 300 * size;
-					} else {
-						WIDTH = 300 * size;
-						HEIGHT = 720 * size;
-					}
-					const canvas = createCanvas(WIDTH, HEIGHT);
-					const ctx = canvas.getContext("2d");
-
-					ctx.fillStyle = ps.bg_color;
-					ctx.fillRect(0, 0, WIDTH, HEIGHT);
-
-					offset_i = ps.border;
-
-					promises.push(
-						draw_image(images[0], ctx, ps.border, ps.is_horizontal)
-					);
-					promises.push(
-						draw_image(images[1], ctx, ps.border, ps.is_horizontal)
-					);
-					promises.push(
-						draw_image(images[2], ctx, ps.border, ps.is_horizontal)
-					);
-
-					const all_done = Promise.all(promises);
-					all_done
-						.then(() => {
-							const key = `collage_${ps.id}.png`;
-							const params = {
-								Bucket: process.env.BUCKET,
-								Key: key,
-								Body: canvas.toBuffer(),
-							};
-							s3.putObject(params)
-								.promise()
-								.then(() => {
-									const { Body, ...rest } = params;
-									s3.getSignedUrl(
-										"getObject",
-										rest,
-										(err, image_url) => {
-											if (err)
-												console.error(err, err.stack);
-											context.prisma.process
-												.update({
-													where: {
-														id: ps.id,
-													},
-													data: {
-														output: image_url,
-														state: "DONE",
-														log:
-															updated_ps.log +
-															"images were drawn",
-													},
-												})
-												.then(() => {
-													console.log(
-														"everythings done"
-													);
-												});
-										}
-									);
-								});
-						})
-						.catch(console.log);
-				})
-				.catch(console.log);
+		await context.prisma.process.update({
+			where: { id: ps.id },
+			data: {
+				state: "DOING",
+				log: ps.log + "images loaded\n",
+			},
 		});
+
+		if (ps.is_horizontal) {
+			WIDTH = 720 * size;
+			HEIGHT = 300 * size;
+		} else {
+			WIDTH = 300 * size;
+			HEIGHT = 720 * size;
+		}
+		const canvas = createCanvas(WIDTH, HEIGHT);
+		const ctx = canvas.getContext("2d");
+
+		ctx.fillStyle = ps.bg_color;
+		ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+		offset_i = ps.border;
+
+		await Promise.all([
+			draw_image(images[0], ctx, ps.border, ps.is_horizontal),
+			draw_image(images[1], ctx, ps.border, ps.is_horizontal),
+			draw_image(images[2], ctx, ps.border, ps.is_horizontal),
+		]);
+
+		const key = `collage_${ps.id}.png`;
+		const param = {
+			Bucket: process.env.BUCKET,
+			Key: key,
+			Body: canvas.toBuffer(),
+		};
+
+		await s3.putObject(param).promise();
+
+		const { Body, ...rest } = param;
+		const image_url = await new Promise((resolve, reject) => {
+			s3.getSignedUrl("getObject", rest, (err, url) => {
+				if (err) {
+					console.error(err, err.stack);
+					reject(err);
+				} else {
+					resolve(url);
+				}
+			});
+		});
+
+		await context.prisma.process.update({
+			where: { id: ps.id },
+			data: {
+				output: image_url,
+				state: "DONE",
+				log: ps.log + "images were drawn",
+			},
+		});
+
+		console.log("everything's done");
 	} catch (error) {
 		console.log(error);
 	}

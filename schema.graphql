@@ -3,6 +3,7 @@
 
 
 type Mutation {
+  CancelProcess(id: String!): Process!
   CreateProcess(bg_color: String!, border: Int!, images: [String!]!, is_horizontal: Boolean!): Process
   UploadImage(mimetype: String!, name: String!): String!
 }
