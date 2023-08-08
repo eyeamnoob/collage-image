@@ -66,6 +66,7 @@ export interface NexusGenFieldTypes {
     state: NexusGenEnums['State']; // State!
   }
   Query: { // field return type
+    DownloadImage: string; // String!
     processes: NexusGenRootTypes['Process'][]; // [Process!]!
   }
 }
@@ -85,6 +86,7 @@ export interface NexusGenFieldTypeNames {
     state: 'State'
   }
   Query: { // field return type name
+    DownloadImage: 'String'
     processes: 'Process'
   }
 }
@@ -106,6 +108,9 @@ export interface NexusGenArgTypes {
     }
   }
   Query: {
+    DownloadImage: { // args
+      name: string; // String!
+    }
     processes: { // args
       state?: NexusGenEnums['State'] | null; // State
     }

@@ -157,6 +157,43 @@ export const UploadImages = extendType({
 	},
 });
 
+export const DownloadImage = extendType({
+	type: "Query",
+	definition(t) {
+		t.nonNull.field("DownloadImage", {
+			type: "String",
+			args: {
+				name: nonNull(stringArg()),
+			},
+			async resolve(parent, args, context) {
+				const s3 = new AWS.S3(CONFIG);
+
+				const bucket_name = process.env.BUCKET;
+				const expiration = 60 * 10; // expires in 10 minutes
+
+				const params = {
+					Bucket: bucket_name,
+					Key: args.name,
+					Expires: expiration,
+				};
+
+				const image_url = await new Promise((resolve, reject) => {
+					s3.getSignedUrl("getObject", params, (err, url) => {
+						if (err) {
+							console.error(err, err.stack);
+							reject(err);
+						} else {
+							resolve(url);
+						}
+					});
+				});
+
+				return image_url;
+			},
+		});
+	},
+});
+
 export const CancelProcess = extendType({
 	type: "Mutation",
 	definition(t) {

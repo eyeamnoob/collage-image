@@ -86,16 +86,16 @@ export async function collage_image(ps) {
 			draw_image(images[2], ctx, ps.border, ps.is_horizontal),
 		]);
 
-		const key = `collage_${ps.id}.png`;
-		const param = {
+		const output_key = `collage_${ps.id}.png`;
+		const otuput_params = {
 			Bucket: process.env.BUCKET,
-			Key: key,
+			Key: output_key,
 			Body: canvas.toBuffer(),
 		};
 
-		await s3.putObject(param).promise();
+		await s3.putObject(otuput_params).promise();
 
-		const { Body, ...rest } = param;
+		const { Body, ...rest } = otuput_params;
 		const image_url = await new Promise((resolve, reject) => {
 			s3.getSignedUrl("getObject", rest, (err, url) => {
 				if (err) {
@@ -110,7 +110,7 @@ export async function collage_image(ps) {
 		await context.prisma.process.update({
 			where: { id: ps.id },
 			data: {
-				output: image_url,
+				output: output_key,
 				state: "DONE",
 				log: ps.log + "images were drawn",
 			},

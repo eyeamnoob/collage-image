@@ -18,6 +18,7 @@ type Process {
 }
 
 type Query {
+  DownloadImage(name: String!): String!
   processes(state: State): [Process!]!
 }
 
