@@ -95,18 +95,6 @@ export async function collage_image(ps) {
 
 		await s3.putObject(otuput_params).promise();
 
-		const { Body, ...rest } = otuput_params;
-		const image_url = await new Promise((resolve, reject) => {
-			s3.getSignedUrl("getObject", rest, (err, url) => {
-				if (err) {
-					console.error(err, err.stack);
-					reject(err);
-				} else {
-					resolve(url);
-				}
-			});
-		});
-
 		await context.prisma.process.update({
 			where: { id: ps.id },
 			data: {
