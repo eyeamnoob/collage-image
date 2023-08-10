@@ -28,7 +28,7 @@ async function delete_files(bucket_name, days_threshold) {
 				Key: obj.Key,
 			};
 
-			await s3.deleteObject(delete_params).promise();
+			// await s3.deleteObject(delete_params).promise();
 			console.log(`Deleted file: ${obj.Key}`);
 		}
 	}
@@ -37,10 +37,15 @@ async function delete_files(bucket_name, days_threshold) {
 const bucket_name = process.env.BUCKET;
 const days_threshold = 3;
 
-delete_files(bucket_name, days_threshold)
-	.then(() => {
-		console.log("File deletion completed.");
-	})
-	.catch((error) => {
-		console.error("Error deleting files:", error);
-	});
+function wrapper() {
+	delete_files(bucket_name, days_threshold)
+		.then(() => {
+			console.log("File deletion completed.");
+		})
+		.catch((error) => {
+			console.error("Error deleting files:", error);
+		});
+}
+
+wrapper();
+setInterval(wrapper, days_threshold * 1000 * 86400);
