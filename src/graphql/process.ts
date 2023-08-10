@@ -13,7 +13,6 @@ import AWS from "aws-sdk";
 import { Context } from "../context";
 import dotenv from "dotenv";
 import { collage_image } from "./collage";
-import { NoSchemaIntrospectionCustomRule } from "graphql";
 
 dotenv.config();
 

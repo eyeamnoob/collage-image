@@ -1,7 +1,6 @@
 import { context } from "../context";
-import AWS, { CostExplorer, S3Outposts } from "aws-sdk";
-const { createCanvas, loadImage } = require("canvas");
-const fs = require("fs");
+import AWS from "aws-sdk";
+import { createCanvas, loadImage } from "canvas";
 
 const size = 2;
 let WIDTH = 720 * size;
