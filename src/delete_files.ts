@@ -1,6 +1,8 @@
-const AWS = require("aws-sdk");
-const moment = require("moment");
-require("dotenv").config();
+import AWS from "aws-sdk";
+import moment from "moment";
+import dotent from "dotenv";
+
+dotent.config();
 
 async function delete_files(bucket_name, days_threshold) {
 	const CONFIG = {

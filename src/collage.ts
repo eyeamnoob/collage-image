@@ -1,13 +1,16 @@
-import { context } from "../context";
 import AWS from "aws-sdk";
 import { createCanvas, loadImage } from "canvas";
+import { create_rabbit_connection } from "./rabbitmq/rabbitmq";
+import { context } from "./context";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const size = 2;
 let WIDTH = 720 * size;
 let HEIGHT = 300 * size;
 const image_num = 3;
 let offset_i = 0;
-let promises = [];
 
 async function draw_image(s3_object, ctx, border_size, is_horizontal) {
 	// 299 is the max border size
@@ -35,7 +38,7 @@ async function draw_image(s3_object, ctx, border_size, is_horizontal) {
 	}
 }
 
-export async function collage_image(ps) {
+async function collage_image(ps) {
 	if (!ps.is_active) {
 		return;
 	}
@@ -108,3 +111,32 @@ export async function collage_image(ps) {
 		console.log(error);
 	}
 }
+
+async function consume_message() {
+	try {
+		const rabbit = await create_rabbit_connection();
+
+		const queue_name = process.env.RABBIT_PS_QUEUE;
+		await rabbit.channel.assertQueue(queue_name, { durable: false });
+
+		console.log("Waiting for messages...");
+
+		rabbit.channel.consume(
+			queue_name,
+			async (message) => {
+				if (message !== null) {
+					const ps = JSON.parse(message.content.toString());
+					console.log("Received ps:", ps);
+
+					rabbit.channel.ack(message);
+					await collage_image(ps);
+				}
+			},
+			{ noAck: false }
+		);
+	} catch (error) {
+		console.error("Error occurred:", error);
+	}
+}
+
+consume_message();

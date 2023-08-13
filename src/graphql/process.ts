@@ -12,7 +12,7 @@ import {
 import AWS from "aws-sdk";
 import { Context } from "../context";
 import dotenv from "dotenv";
-import { collage_image } from "./collage";
+import { create_rabbit_connection } from "../rabbitmq/rabbitmq";
 
 dotenv.config();
 
@@ -111,7 +111,13 @@ export const ProcessMutation = extendType({
 								log: "process created. pending...\n",
 							},
 						});
-						await collage_image(ps);
+						const rabbit = await create_rabbit_connection();
+						const message = JSON.stringify(ps);
+						rabbit.channel.sendToQueue(
+							process.env.RABBIT_PS_QUEUE,
+							Buffer.from(message)
+						);
+						console.log("ps added.");
 						return ps;
 					} else {
 						throw new Error(
